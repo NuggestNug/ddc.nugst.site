@@ -1,272 +1,198 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DDC Menu</title>
-<link rel="icon" type="image/png" href="ddc-favi-con.png">
-
-<style>
-    body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--fg);
-        font-family: Arial, sans-serif;
-        overflow: hidden;
-        transition: background 0.4s, color 0.4s;
-    }
-
-    :root {
-        --bg-dark: #0c0c0d;
-        --fg-dark: #ffffff;
-        --bg-light: #f4f4f4;
-        --fg-light: #000000;
-    }
-
-    [data-theme="dark"] { --bg: var(--bg-dark); --fg: var(--fg-dark); }
-    [data-theme="light"] { --bg: var(--bg-light); --fg: var(--fg-light); }
-
-    img {
-        max-width: 100%;
-        max-height: 100%;
-        user-select: none;
-        pointer-events: none;
-        border-radius: 10px;
-    }
-
-    #viewer {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    .page {
-        position: absolute;
-        opacity: 0;
-        transform: translateX(100%);
-        transition: transform 0.45s ease, opacity 0.35s ease;
-    }
-
-    .page.visible {
-        opacity: 1;
-        transform: translateX(0);
-    }
-
-    .page.left {
-        transform: translateX(-100%);
-        opacity: 0;
-    }
-
-    .arrow {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        padding: 10px 18px;
-        background: rgba(0,0,0,0.35);
-        border-radius: 10px;
-        cursor: pointer;
-        font-size: 22px;
-        user-select: none;
-        transition: background 0.25s;
-    }
-    .arrow:hover {
-        background: rgba(255,255,255,0.4);
-    }
-
-    #leftArrow { left: 15px; }
-    #rightArrow { right: 15px; }
-
-    #counter {
-        position: absolute;
-        bottom: 15px;
-        right: 15px;
-        background: rgba(0,0,0,0.35);
-        padding: 6px 10px;
-        border-radius: 8px;
-        font-size: 14px;
-    }
-
-    /* Theme button */
-    #themeBtn {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        font-size: 24px;
-        cursor: pointer;
-        padding: 6px 10px;
-        border-radius: 8px;
-        background: rgba(0,0,0,0.35);
-        transition: background 0.25s;
-    }
-    #themeBtn:hover {
-        background: rgba(255,255,255,0.4);
-    }
-
-    /* Zoom controls */
-    #zoomBox {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        display: flex;
-        gap: 6px;
-        background: rgba(0,0,0,0.35);
-        padding: 6px 10px;
-        border-radius: 8px;
-        user-select: none;
-    }
-    #zoomBox div {
-        padding: 3px 8px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 18px;
-        transition: background 0.25s;
-    }
-    #zoomBox div:hover {
-        background: rgba(255,255,255,0.4);
-    }
-
-    /* Panning */
-    #panLayer {
-        position: absolute;
-        inset: 0;
-        cursor: grab;
-    }
-</style>
-</head>
-
-<body>
-
-<div id="themeBtn">☾</div>
-
-<div id="zoomBox">
-    <div id="zoomOut">−</div>
-    <div id="zoomReset">100%</div>
-    <div id="zoomIn">+</div>
-</div>
-
-<div id="viewer">
-    <div id="panLayer"></div>
-
-    <img src="ddc.png" id="page0" class="page visible">
-    <img src="ddc2.png" id="page1" class="page">
-    <img src="ddc3.png" id="page2" class="page">
-</div>
-
-<div id="leftArrow" class="arrow">◀</div>
-<div id="rightArrow" class="arrow">▶</div>
-
-<div id="counter">1 / 3</div>
-
 <script>
-    /* THEME */
-    const root = document.documentElement;
-    const themeBtn = document.getElementById("themeBtn");
+/* ---------- configuration ---------- */
+const pages = ["ddc.png","ddc2.png","ddc3.png"];
+let index = 0;
 
-    function setTheme(t) {
-        root.setAttribute("data-theme", t);
-        themeBtn.textContent = t === "dark" ? "☾" : "☼";
-        localStorage.setItem("theme", t);
-    }
+/* zoom/pan state */
+let zoomSteps = [1, 1.25, 1.5, 1.75, 2];
+let zoomIndex = 0;
+let zoom = 1;
 
-    setTheme(localStorage.getItem("theme") || "dark");
+let panX = 0, panY = 0;
+let isPanning = false;
+let startPan = {x:0,y:0};
+let lastPointer = null;
 
-    themeBtn.onclick = () => {
-        const newT = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-        setTheme(newT);
-    };
+/* DOM refs */
+const track = document.getElementById('track');
+const viewport = document.getElementById('viewport');
+const pageCounter = document.getElementById('pageCounter');
+const imgEls = pages.map((_,i)=>document.getElementById('img-'+i));
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomOutBtn = document.getElementById('zoomOut');
+const zoomLabel = document.getElementById('zoomLabel');
+const zoomReset = document.getElementById('zoomReset');
+const themeToggle = document.getElementById('themeToggle');
 
-    /* PAGES */
-    let current = 0;
-    const pages = [
-        document.getElementById("page0"),
-        document.getElementById("page1"),
-        document.getElementById("page2")
-    ];
+/* ---------- THEME ---------- */
+function loadTheme(){
+  const saved = localStorage.getItem('ddc-theme') || 'dark';
+  document.body.setAttribute('data-theme', saved);
+  themeToggle.textContent = saved === 'dark' ? '☾' : '☼';
+}
+function toggleTheme(){
+  const now = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', now);
+  themeToggle.textContent = now === 'dark' ? '☾' : '☼';
+  localStorage.setItem('ddc-theme', now);
+}
+themeToggle.addEventListener('click', toggleTheme);
 
-    function updatePages(newIndex) {
-        pages.forEach((p, i) => {
-            p.classList.remove("visible", "left");
-            if (i === newIndex) p.classList.add("visible");
-            if (i < newIndex) p.classList.add("left");
-        });
-        current = newIndex;
-        document.getElementById("counter").textContent = (current+1) + " / " + pages.length;
-    }
+/* ---------- PAGE MOVEMENT ---------- */
+function updateTrack(animate=true){
+  track.style.transition = animate ?
+      'transform 420ms cubic-bezier(.22,.9,.26,1)' :
+      'none';
 
-    document.getElementById("leftArrow").onclick = () => {
-        if (current > 0) updatePages(current - 1);
-    };
-    document.getElementById("rightArrow").onclick = () => {
-        if (current < pages.length - 1) updatePages(current + 1);
-    };
+  track.style.transform = `translateX(${-index*100}%)`;
+  pageCounter.textContent = `${index+1} / ${pages.length}`;
 
-    /* ZOOM + PAN */
-    let zoom = 1;
-    const minZ = 0.5;
-    const maxZ = 5;
-    const viewer = document.getElementById("viewer");
-    const panLayer = document.getElementById("panLayer");
+  resetImageTransforms();
+}
 
-    function applyZoom() {
-        pages.forEach(p => {
-            p.style.transform = `translate(-50%, -50%) scale(${zoom})`;
-            p.style.left = "50%";
-            p.style.top = "50%";
-            p.style.position = "absolute";
-        });
-        document.getElementById("zoomReset").textContent = Math.round(zoom*100) + "%";
-    }
+function goPrev(){
+  if(zoom === 1){
+    index = (index - 1 + pages.length) % pages.length;  // LOOP FIXED
+    updateTrack(true);
+  } else {
+    resetPanOnly();
+  }
+}
 
-    document.getElementById("zoomIn").onclick = () => {
-        zoom = Math.min(maxZ, zoom + 0.1);
-        applyZoom();
-    };
-    document.getElementById("zoomOut").onclick = () => {
-        zoom = Math.max(minZ, zoom - 0.1);
-        applyZoom();
-    };
-    document.getElementById("zoomReset").onclick = () => {
-        zoom = 1;
-        applyZoom();
-    };
+function goNext(){
+  if(zoom === 1){
+    index = (index + 1) % pages.length;                 // LOOP FIXED
+    updateTrack(true);
+  } else {
+    resetPanOnly();
+  }
+}
 
-    /* Panning */
-    let dragging = false;
-    let startX, startY;
-    let offsetX = 0, offsetY = 0;
+prevBtn.addEventListener('click', goPrev);
+nextBtn.addEventListener('click', goNext);
 
-    panLayer.addEventListener("mousedown", e => {
-        dragging = true;
-        panLayer.style.cursor = "grabbing";
-        startX = e.clientX - offsetX;
-        startY = e.clientY - offsetY;
-    });
+/* keyboard */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft') goPrev();
+  if(e.key === 'ArrowRight') goNext();
+  if(e.key === '+' || e.key === '=') zoomInBtn.click();
+  if(e.key === '-') zoomOutBtn.click();
+});
 
-    window.addEventListener("mousemove", e => {
-        if (!dragging) return;
-        offsetX = e.clientX - startX;
-        offsetY = e.clientY - startY;
-        viewer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-    });
+/* ---------- ZOOM ---------- */
+function applyZoom(){
+  zoom = zoomSteps[zoomIndex];
+  zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
 
-    window.addEventListener("mouseup", () => {
-        dragging = false;
-        panLayer.style.cursor = "grab";
-    });
+  imgEls.forEach(img=>{
+    img.style.transition = 'transform 180ms ease';
+    img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  });
 
-    /* MOBILE SWIPE */
-    let touchStartX = 0;
-    window.addEventListener("touchstart", e => {
-        touchStartX = e.touches[0].clientX;
-    });
-    window.addEventListener("touchend", e => {
-        const endX = e.changedTouches[0].clientX;
-        if (endX - touchStartX > 50 && current > 0) updatePages(current - 1);
-        if (touchStartX - endX > 50 && current < pages.length - 1) updatePages(current + 1);
-    });
+  // show/hide reset button
+  if(zoom !== 1 || panX !== 0 || panY !== 0){
+    zoomReset.style.opacity = '1';
+    zoomReset.style.pointerEvents = 'auto';
+  } else {
+    zoomReset.style.opacity = '0';
+    zoomReset.style.pointerEvents = 'none';
+  }
+}
+
+zoomInBtn.addEventListener('click', ()=>{
+  if(zoomIndex < zoomSteps.length - 1) zoomIndex++;
+  applyZoom();
+});
+zoomOutBtn.addEventListener('click', ()=>{
+  if(zoomIndex > 0) zoomIndex--;
+  applyZoom();
+});
+zoomReset.addEventListener('click', ()=>{
+  zoomIndex = 0;
+  panX = 0; panY = 0;
+  applyZoom();
+});
+
+function resetPanOnly(){
+  panX = 0; panY = 0;
+  imgEls.forEach(img => img.style.transform = `translate(0px,0px) scale(${zoom})`);
+}
+
+/* ---------- PAN ---------- */
+function setPointerCapture(el, evt){
+  try{ el.setPointerCapture(evt.pointerId); }catch(e){}
+}
+function releasePointerCapture(el, evt){
+  try{ el.releasePointerCapture(evt.pointerId); }catch(e){}
+}
+
+viewport.addEventListener('pointerdown', (ev)=>{
+  if(zoom <= 1) return;
+  isPanning = true;
+  lastPointer = {x: ev.clientX, y: ev.clientY};
+  startPan = {x: panX, y: panY};
+  setPointerCapture(viewport, ev);
+  viewport.style.cursor = 'grabbing';
+});
+
+viewport.addEventListener('pointermove', (ev)=>{
+  if(!isPanning || zoom <= 1) return;
+  const dx = ev.clientX - lastPointer.x;
+  const dy = ev.clientY - lastPointer.y;
+  panX = startPan.x + dx;
+  panY = startPan.y + dy;
+  imgEls.forEach(img => img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`);
+});
+
+viewport.addEventListener('pointerup', (ev)=>{
+  isPanning = false;
+  releasePointerCapture(viewport, ev);
+  viewport.style.cursor = 'default';
+});
+
+viewport.addEventListener('pointercancel', ()=>{
+  isPanning = false;
+  viewport.style.cursor = 'default';
+});
+
+/* ---------- SWIPE (mobile) ---------- */
+let touchStart = null;
+viewport.addEventListener('touchstart', (e)=>{
+  if(zoom > 1) return;
+  const t = e.touches[0];
+  touchStart = {x:t.clientX, y:t.clientY};
+},{passive:true});
+
+viewport.addEventListener('touchend', (e)=>{
+  if(!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x;
+  const dy = t.clientY - touchStart.y;
+  if(Math.abs(dx) > 40){
+    if(dx < 0) goNext();
+    else goPrev();
+  } else if(Math.abs(dy) > 60){
+    if(dy < 0) goNext();
+    else goPrev();
+  }
+  touchStart = null;
+});
+
+/* ---------- LOAD ---------- */
+function resetImageTransforms(){
+  if(zoom === 1){
+    panX = 0; panY = 0;
+    imgEls.forEach(img => img.style.transform = `translate(0px,0px) scale(1)`);
+  } else {
+    imgEls.forEach(img => img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadTheme();
+  updateTrack(false);
+  applyZoom();
+});
 </script>
-</body>
-</html>
