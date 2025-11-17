@@ -1,144 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DDC Menu</title>
-
-    <!-- Favicon -->
+    <meta charset="UTF-8">
+    <title>ddc</title>
     <link rel="icon" type="image/png" href="ddc-favicon.png">
 
     <style>
         body {
             margin: 0;
-            background: #111;
-            color: #eee;
+            background: var(--bg);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            overflow: hidden;
-            transition: background 0.3s, color 0.3s;
-            font-family: Arial, sans-serif;
+            transition: background 0.4s;
         }
 
-        img {
-            max-height: 95vh;
-            max-width: 95vw;
-            border-radius: 10px;
-            transition: filter 0.3s;
+        body[data-theme="dark"] {
+            --bg: #111;
+            --fg: #fff;
+            --button-bg: rgba(255, 255, 255, 0.15);
+            --button-hover: rgba(255, 255, 255, 0.45);
         }
 
-        .nav-btn {
-            position: absolute;
+        body[data-theme="light"] {
+            --bg: #f3f3f3;
+            --fg: #000;
+            --button-bg: rgba(0, 0, 0, 0.15);
+            --button-hover: rgba(0, 0, 0, 0.45);
+        }
+
+        .viewer {
+            max-height: 90vh;
+            max-width: 90vw;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .fade {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .navButton {
+            position: fixed;
             top: 50%;
             transform: translateY(-50%);
-            padding: 15px 20px;
-            font-size: 28px;
+            background: var(--button-bg);
+            color: var(--fg);
+            padding: 16px;
+            font-size: 32px;
+            border-radius: 14px;
             cursor: pointer;
+            transition: background 0.25s, transform 0.25s;
             user-select: none;
+        }
+
+        .navButton:hover {
+            background: var(--button-hover);
+            transform: translateY(-50%) scale(1.18);
+        }
+
+        .leftBtn { left: 30px; }
+        .rightBtn { right: 30px; }
+
+        .counter {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            background: var(--button-bg);
+            padding: 10px 16px;
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.35);
-            transition: background 0.2s, opacity 0.2s;
+            color: var(--fg);
+            font-size: 18px;
         }
 
-        .nav-btn:hover {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        #left-btn { left: 20px; }
-        #right-btn { right: 20px; }
-
-        .page-count {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            padding: 10px 14px;
-            background: rgba(0, 0, 0, 0.35);
-            border-radius: 10px;
-            font-size: 16px;
-            transition: background 0.2s;
-        }
-
-        .page-count:hover {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        .theme-toggle {
-            position: absolute;
+        .cornerButton {
+            position: fixed;
             top: 20px;
-            right: 20px;
+            left: 20px;
+            background: var(--button-bg);
             padding: 10px 14px;
-            font-size: 20px;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            background: rgba(0,0,0,0.35);
+            color: var(--fg);
+            font-size: 22px;
+            transition: background 0.25s, transform 0.25s;
             user-select: none;
         }
 
-        .theme-toggle:hover {
-            background: rgba(0,0,0,0.6);
+        .cornerButton.right {
+            left: unset;
+            right: 20px;
         }
 
-        /* Light mode overrides */
-        .light-mode {
-            background: #f2f2f2;
-            color: #222;
-        }
-
-        .light-mode .nav-btn,
-        .light-mode .page-count,
-        .light-mode .theme-toggle {
-            background: rgba(255, 255, 255, 0.35);
-        }
-
-        .light-mode .nav-btn:hover,
-        .light-mode .page-count:hover,
-        .light-mode .theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.6);
+        .cornerButton:hover {
+            background: var(--button-hover);
+            transform: scale(1.18);
         }
     </style>
-</head>
-<body>
-
-    <span class="theme-toggle" id="themeToggle">☾</span>
-
-    <span class="nav-btn" id="left-btn">‹</span>
-    <img id="menu-img" src="ddc.png" alt="Menu Page" />
-    <span class="nav-btn" id="right-btn">›</span>
-
-    <div class="page-count" id="page-count">1 / 3</div>
 
     <script>
+        let currentPage = 0;
         const pages = ["ddc.png", "ddc2.png", "ddc3.png"];
-        let current = 0;
+        let zoomed = false;
 
-        const img = document.getElementById("menu-img");
-        const count = document.getElementById("page-count");
+        document.addEventListener("DOMContentLoaded", () => {
+            const img = document.getElementById("menuImage");
+            const pageCounter = document.getElementById("pageCounter");
 
-        function updatePage() {
-            img.src = pages[current];
-            count.textContent = (current + 1) + " / " + pages.length;
-        }
+            // Load saved theme
+            const savedTheme = localStorage.getItem("theme") || "dark";
+            document.body.dataset.theme = savedTheme;
 
-        document.getElementById("left-btn").onclick = () => {
-            current = (current - 1 + pages.length) % pages.length;
             updatePage();
-        };
 
-        document.getElementById("right-btn").onclick = () => {
-            current = (current + 1) % pages.length;
-            updatePage();
-        };
+            document.getElementById("prevBtn").onclick = () => {
+                currentPage = (currentPage - 1 + pages.length) % pages.length;
+                updatePage(true);
+            };
 
-        const toggle = document.getElementById("themeToggle");
+            document.getElementById("nextBtn").onclick = () => {
+                currentPage = (currentPage + 1) % pages.length;
+                updatePage(true);
+            };
 
-        toggle.onclick = () => {
-            document.body.classList.toggle("light-mode");
-            toggle.textContent =
-                document.body.classList.contains("light-mode") ? "☼" : "☾";
-        };
+            document.getElementById("themeToggle").onclick = () => {
+                const newTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+                document.body.dataset.theme = newTheme;
+                localStorage.setItem("theme", newTheme);
+            };
+
+            document.getElementById("zoomToggle").onclick = () => {
+                zoomed = !zoomed;
+                img.style.transform = zoomed ? "scale(1.5)" : "scale(1)";
+            };
+
+            function updatePage(animated = false) {
+                if (animated) {
+                    img.classList.remove("fade");
+                    void img.offsetWidth;
+                    img.classList.add("fade");
+                }
+                img.src = pages[currentPage];
+                pageCounter.textContent = `${currentPage + 1} / ${pages.length}`;
+            }
+        });
     </script>
 
+</head>
+
+<body>
+    <div id="zoomToggle" class="cornerButton">🔍</div>
+    <div id="themeToggle" class="cornerButton right">☾</div>
+
+    <img id="menuImage" class="viewer">
+
+    <div id="prevBtn" class="navButton leftBtn">◀</div>
+    <div id="nextBtn" class="navButton rightBtn">▶</div>
+
+    <div id="pageCounter" class="counter"></div>
 </body>
+
 </html>
