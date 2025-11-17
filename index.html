@@ -7,458 +7,306 @@
 <link rel="icon" type="image/png" href="ddc-favi-con.png">
 
 <style>
-  :root{
-    --gap: 18px;
-    --panel-radius: 12px;
-  }
+  :root { --gap:18px; --panel-radius:12px; --transition:280ms; }
 
-  /* theme variables */
+  /* theme variables (applied via data-theme on body) */
   body[data-theme="dark"]{
-    --bg: #0e0e10;
-    --fg: #f2f2f2;
-    --panel: rgba(0,0,0,0.5);
-    --panel-hover: rgba(255,255,255,0.28);
+    --bg: #0f0f11;
+    --fg: #f3f3f3;
+    --panel: rgba(255,255,255,0.07);
+    --panel-hover: rgba(255,255,255,0.18);
+    --shadow: rgba(0,0,0,0.55);
   }
   body[data-theme="light"]{
-    --bg: #f5f5f6;
-    --fg: #111;
-    --panel: rgba(255,255,255,0.7);
-    --panel-hover: rgba(0,0,0,0.12);
+    --bg: #f6f7f8;
+    --fg: #0f1112;
+    --panel: rgba(0,0,0,0.06);
+    --panel-hover: rgba(0,0,0,0.14);
+    --shadow: rgba(0,0,0,0.12);
   }
 
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
   body{background:var(--bg);color:var(--fg);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 
-  /* carousel container */
+  /* main viewport & carousel */
   .viewport{
-    width:100vw;
-    height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:relative;
-    touch-action: none; /* we handle gestures */
+    width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;
   }
-
   .carousel{
-    width: min(95vw, 1200px);
-    height: min(95vh, 1600px);
-    overflow: hidden;
-    border-radius:10px;
-    background: transparent;
-    position: relative;
+    width:min(95vw,1200px);height:min(95vh,1600px);overflow:hidden;border-radius:10px;position:relative;
   }
+  .track{display:flex;width:100%;height:100%;transition:transform 420ms cubic-bezier(.22,.9,.26,1);will-change:transform;}
+  .slide{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  .slide img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;user-select:none;-webkit-user-drag:none;touch-action:none;transition:transform 160ms ease;}
 
-  .track{
-    display:flex;
-    width:100%;
-    height:100%;
-    transition: transform 420ms cubic-bezier(.22,.9,.26,1);
-    will-change: transform;
+  /* nav buttons */
+  .navBtn{
+    position:fixed;top:50%;transform:translateY(-50%);z-index:40;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--panel);color:var(--fg);padding:14px 16px;border-radius:14px;font-size:28px;cursor:pointer;
+    box-shadow: 0 10px 30px var(--shadow);transition:transform 160ms ease, background 160ms ease;
   }
+  .navBtn:hover{ transform: translateY(-50%) scale(1.18); background:var(--panel-hover); }
+  .nav-left{ left:16px; } .nav-right{ right:16px; }
 
-  .slide{
-    min-width:100%;
-    height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:relative;
+  /* controls: bottom-right counter */
+  .counter{
+    position:fixed;right:18px;bottom:18px;background:var(--panel);color:var(--fg);padding:8px 12px;border-radius:10px;
+    font-size:15px;box-shadow:0 8px 24px var(--shadow);transition:background 160ms ease;
   }
+  .counter:hover{ background:var(--panel-hover); transform: translateY(-1px); }
 
-  /* image viewer inside slide */
-  .slide img{
-    max-width:100%;
-    max-height:100%;
-    object-fit:contain;
-    border-radius:10px;
-    transform-origin: center center;
-    transition: transform 200ms ease, filter 200ms;
-    cursor: grab;
-    -webkit-user-drag: none;
-    user-select: none;
+  /* corner controls */
+  .corner{
+    position:fixed;top:12px;left:12px;display:flex;gap:10px;z-index:50;
   }
-  .slide img:active{ cursor:grabbing; }
+  .corner .control{
+    background:var(--panel);color:var(--fg);padding:8px 10px;border-radius:10px;font-size:16px;cursor:pointer;
+    box-shadow:0 8px 20px var(--shadow);transition:transform 140ms ease, background 140ms ease;
+  }
+  .corner .control:hover{ transform: scale(1.12); background:var(--panel-hover); }
 
-  /* controls: nav arrows */
-  .nav {
-    position:fixed;
-    top:50%;
-    transform:translateY(-50%);
-    display:flex;
-    gap:var(--gap);
-    z-index:40;
-    pointer-events: auto;
-  }
-  .nav .btn{
-    background:var(--panel);
-    color:var(--fg);
-    padding:12px 14px;
-    border-radius:calc(var(--panel-radius));
-    font-size:28px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    cursor:pointer;
-    transition: transform 0.18s ease, background 0.18s ease;
-    backdrop-filter: blur(6px);
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .nav .btn:hover{
-    transform: scale(1.14);
-    background: var(--panel-hover);
-  }
-  .nav.left { left:16px; }
-  .nav.right{ right:16px; }
+  .corner.right{ left:auto; right:12px; }
 
-  /* page counter panel bottom-right */
-  .counter {
-    position:fixed;
-    right:20px;
-    bottom:18px;
-    background:var(--panel);
-    color:var(--fg);
-    padding:8px 12px;
-    border-radius:10px;
-    font-size:15px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.2);
-    transition: background .2s;
-    z-index:40;
-  }
-  .counter:hover{ background:var(--panel-hover); transform:translateY(-1px); }
+  /* zoom grouping */
+  .zoom-label{ padding:6px 8px; font-size:14px; }
 
-  /* top-left zoom button and top-right theme toggle */
-  .corner {
-    position:fixed;
-    top:14px;
-    left:14px;
-    z-index:50;
-    display:flex;
-    gap:10px;
-    align-items:center;
-  }
-
-  .corner .control {
-    background:var(--panel);
-    color:var(--fg);
-    padding:8px 10px;
-    border-radius:10px;
-    font-size:18px;
-    cursor:pointer;
-    transition: transform .18s, background .18s;
-    box-shadow:0 6px 20px rgba(0,0,0,0.15);
-    user-select:none;
-  }
-  .corner .control:hover{ transform:scale(1.12); background:var(--panel-hover); }
-
-  .corner .right { left: auto; right: 14px; }
-
-  /* zoom controls group (inside corner left) */
-  .zoom-controls{
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .zoom-controls .zoom-label {
-    padding:6px 8px;
-    background:transparent;
-    font-size:14px;
-  }
-
-  /* mobile hints: make controls larger */
+  /* mobile adjustments */
   @media (max-width:640px){
-    .nav .btn{ padding:14px 16px; font-size:26px; }
-    .corner .control{ padding:10px 12px; font-size:20px; }
+    .navBtn{ padding:16px 18px; font-size:26px; }
+    .corner .control{ padding:10px 12px; font-size:18px; }
     .counter{ right:12px; bottom:12px; font-size:16px; padding:10px 14px; }
   }
 
-  /* subtle focus outline for keyboard users */
-  .btn:focus, .control:focus { outline:2px solid rgba(255,255,255,0.08); outline-offset:3px; }
+  /* focus style */
+  .navBtn:focus, .control:focus{ outline:2px solid rgba(255,255,255,0.06); outline-offset:3px; }
 </style>
 </head>
 <body>
 
-<div class="viewport" id="viewport">
-  <div class="carousel" id="carousel">
-    <div class="track" id="track">
-      <div class="slide"><img id="img-0" src="ddc.png" alt="Page 1"></div>
-      <div class="slide"><img id="img-1" src="ddc2.png" alt="Page 2"></div>
-      <div class="slide"><img id="img-2" src="ddc3.png" alt="Page 3"></div>
+  <div class="viewport" id="viewport">
+    <div class="carousel" id="carousel">
+      <div class="track" id="track">
+        <div class="slide"><img id="img-0" src="ddc.png" alt="page 1"></div>
+        <div class="slide"><img id="img-1" src="ddc2.png" alt="page 2"></div>
+        <div class="slide"><img id="img-2" src="ddc3.png" alt="page 3"></div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- nav arrows -->
-<div class="nav left" aria-hidden="false">
-  <div class="btn" id="prevBtn" title="Previous (←)">‹</div>
-</div>
-<div class="nav right" aria-hidden="false">
-  <div class="btn" id="nextBtn" title="Next (→)">›</div>
-</div>
+  <!-- arrows -->
+  <div class="navBtn nav-left" id="prevBtn" title="Previous (←)">‹</div>
+  <div class="navBtn nav-right" id="nextBtn" title="Next (→)">›</div>
 
-<!-- bottom-right counter -->
-<div class="counter" id="pageCounter">1 / 3</div>
+  <!-- counter -->
+  <div class="counter" id="counter">1 / 3</div>
 
-<!-- top-left zoom and top-right theme -->
-<div class="corner" id="cornerLeft">
-  <div class="control" id="zoomOut" title="Zoom out">−</div>
-  <div class="control" id="zoomLabel" title="Zoom level">100%</div>
-  <div class="control" id="zoomIn" title="Zoom in">＋</div>
-  <div class="control" id="zoomReset" title="Reset zoom">⟳</div>
-</div>
-<div class="corner right" id="cornerRight">
-  <div class="control" id="themeToggle" title="Toggle theme">☾</div>
-</div>
+  <!-- zoom (top-left) -->
+  <div class="corner" id="cornerLeft">
+    <div class="control" id="zoomOut" title="Zoom out">−</div>
+    <div class="control zoom-label" id="zoomLabel">100%</div>
+    <div class="control" id="zoomIn" title="Zoom in">＋</div>
+    <div class="control" id="zoomReset" title="Reset">⟳</div>
+  </div>
+
+  <!-- theme toggle (top-right) -->
+  <div class="corner right" id="cornerRight">
+    <div class="control" id="themeToggle" title="Toggle light/dark">☾</div>
+  </div>
 
 <script>
-/* ---------- configuration ---------- */
-const pages = ["ddc.png","ddc2.png","ddc3.png"];
+/* ===== configuration & state ===== */
+const pages = ['ddc.png','ddc2.png','ddc3.png'];
 let index = 0;
 
-/* zoom/pan state */
-let zoom = 1;
 const zoomSteps = [1, 1.25, 1.5, 1.75, 2];
-let zoomIndex = 0; // maps to zoomSteps
+let zoomIndex = 0;
+let zoom = zoomSteps[zoomIndex];
 let panX = 0, panY = 0;
-let isPanning = false;
-let startPan = {x:0,y:0};
-let lastPointer = null;
+let panning = false;
+let panStart = {x:0,y:0};
+let pointerId = null;
 
 /* DOM refs */
-const track = document.getElementById('track');
-const viewport = document.getElementById('viewport');
-const pageCounter = document.getElementById('pageCounter');
-const imgEls = pages.map((_,i)=>document.getElementById('img-'+i));
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
-const zoomInBtn = document.getElementById('zoomIn');
-const zoomOutBtn = document.getElementById('zoomOut');
-const zoomLabel = document.getElementById('zoomLabel');
-const zoomReset = document.getElementById('zoomReset');
-const themeToggle = document.getElementById('themeToggle');
+let track, viewport, imgs, counter, prevBtn, nextBtn, zoomIn, zoomOut, zoomLabel, zoomReset, themeToggle;
 
-/* --- theme persistence --- */
-function loadTheme(){
-  const saved = localStorage.getItem('ddc-theme') || 'dark';
-  document.body.setAttribute('data-theme', saved);
-  themeToggle.textContent = saved === 'dark' ? '☾' : '☼';
-}
-function toggleTheme(){
-  const now = document.body.getAttribute('data-theme') === 'dark' ? 'light':'dark';
-  document.body.setAttribute('data-theme', now);
-  themeToggle.textContent = now === 'dark' ? '☾' : '☼';
-  localStorage.setItem('ddc-theme', now);
-}
-themeToggle.addEventListener('click', toggleTheme);
+function $(id){ return document.getElementById(id); }
 
-/* --- page control --- */
-function updateTrack(animate=true){
-  if(animate) track.style.transition = 'transform 420ms cubic-bezier(.22,.9,.26,1)';
-  else track.style.transition = 'none';
-  track.style.transform = `translateX(${-index*100}%)`;
-  pageCounter.textContent = `${index+1} / ${pages.length}`;
-  resetImageTransforms(); // reset pan when switching unless zoomed
-}
-
-prevBtn.addEventListener('click', ()=>{ if(zoom===1) { index=(index-1+pages.length)%pages.length; updateTrack(true);} else startResetPan(); });
-nextBtn.addEventListener('click', ()=>{ if(zoom===1) { index=(index+1)%pages.length; updateTrack(true);} else startResetPan(); });
-
-/* keyboard */
-window.addEventListener('keydown', (e)=>{
-  if(e.key === 'ArrowLeft') prevBtn.click();
-  if(e.key === 'ArrowRight') nextBtn.click();
-  if(e.key === '+' || e.key === '=' ) zoomInBtn.click();
-  if(e.key === '-') zoomOutBtn.click();
-  if(e.key === ' ') { e.preventDefault(); toggleZoom(); }
-});
-
-/* --- zoom controls --- */
-function applyZoom(){
-  zoom = zoomSteps[zoomIndex];
-  zoomLabel.textContent = `${Math.round(zoom*100)}%`;
-  imgEls.forEach(img=>{
-    img.style.transition = 'transform 180ms ease';
-    img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-  });
-  // when zoom ==1, reset pan
-  if(zoom === 1){ panX = 0; panY = 0; }
-}
-
-zoomInBtn.addEventListener('click', ()=>{
-  if(zoomIndex < zoomSteps.length-1) zoomIndex++;
-  applyZoom();
-});
-zoomOutBtn.addEventListener('click', ()=>{
-  if(zoomIndex > 0) zoomIndex--;
-  applyZoom();
-});
-zoomReset.addEventListener('click', ()=>{
-  zoomIndex = 0; panX = 0; panY = 0; applyZoom();
-});
-
-function toggleZoom(){
-  if(zoom === 1){ zoomIndex = 2; } else { zoomIndex = 0; panX = 0; panY = 0; }
-  applyZoom();
-}
-
-/* pan handling on pointer (mouse/touch) */
-function setPointerCapture(el, evt){
-  try{ el.setPointerCapture(evt.pointerId); }catch(e){}
-}
-function releasePointerCapture(el, evt){
-  try{ el.releasePointerCapture(evt.pointerId); }catch(e){}
-}
-
-viewport.addEventListener('pointerdown', (ev)=>{
-  // only pan if zoomed in
-  if(zoom <= 1) return;
-  isPanning = true;
-  lastPointer = {x:ev.clientX, y:ev.clientY};
-  startPan = {x: panX, y: panY};
-  setPointerCapture(viewport, ev);
-  viewport.style.cursor = 'grabbing';
-});
-viewport.addEventListener('pointermove', (ev)=>{
-  if(!isPanning || zoom<=1) return;
-  const dx = ev.clientX - lastPointer.x;
-  const dy = ev.clientY - lastPointer.y;
-  panX = startPan.x + dx;
-  panY = startPan.y + dy;
-  imgEls.forEach(img=> img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`);
-});
-viewport.addEventListener('pointerup', (ev)=>{
-  if(!isPanning) return;
-  isPanning = false;
-  releasePointerCapture(viewport, ev);
-  viewport.style.cursor = 'default';
-});
-viewport.addEventListener('pointercancel', (ev)=>{ isPanning=false; viewport.style.cursor='default'; });
-
-/* when not zoomed, swipe/scroll changes pages */
-/* touch swipe detection */
-let touchStart = null;
-let touchMoved = false;
-viewport.addEventListener('touchstart',(e)=> {
-  if(zoom>1) return; // when zoomed, touches are pan handled above
-  const t = e.touches[0];
-  touchStart = {x:t.clientX, y:t.clientY, t:Date.now()};
-  touchMoved = false;
-},{passive:true});
-
-viewport.addEventListener('touchmove',(e)=> {
-  if(!touchStart) return;
-  const t = e.touches[0];
-  const dx = t.clientX - touchStart.x;
-  const dy = t.clientY - touchStart.y;
-  if(Math.abs(dx) > 10 || Math.abs(dy) > 10) touchMoved = true;
-},{passive:true});
-
-viewport.addEventListener('touchend',(e)=>{
-  if(!touchStart || !touchMoved) { touchStart=null; return; }
-  const elapsed = Date.now() - touchStart.t;
-  const t = (e.changedTouches && e.changedTouches[0]) || null;
-  const endX = t ? t.clientX : touchStart.x;
-  const endY = t ? t.clientY : touchStart.y;
-  const dx = endX - touchStart.x;
-  const dy = endY - touchStart.y;
-  // prefer horizontal swipe for pages, but if mostly vertical (mobile), allow it too
-  if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40){
-    if(dx < 0) { index = Math.min(index+1, pages.length-1); updateTrack(true); }
-    else { index = Math.max(index-1,0); updateTrack(true); }
-  } else if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 40){
-    if(dy < 0) { index = Math.min(index+1, pages.length-1); updateTrack(true); }
-    else { index = Math.max(index-1,0); updateTrack(true); }
-  }
-  touchStart = null;
-});
-
-/* mouse wheel / trackpad for desktop - throttle */
-let wheelCooldown = false;
-window.addEventListener('wheel', (e)=>{
-  if(zoom>1) return; // if zoomed, allow scrolling/pan default
-  if(wheelCooldown) return;
-  if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
-    if(e.deltaY > 0) index = Math.min(index+1, pages.length-1);
-    else index = Math.max(index-1,0);
-    updateTrack(true);
-    wheelCooldown = true;
-    setTimeout(()=> wheelCooldown=false, 250);
-  }
-},{passive:true});
-
-/* prevent native image drag */
-imgEls.forEach(img => img.addEventListener('dragstart', e=> e.preventDefault()));
-
-/* reset transforms when changing slide (unless zoomed - keep zoom but reset pan) */
-function resetImageTransforms(){
-  if(zoom === 1){
-    panX=0; panY=0;
-    imgEls.forEach(img=> img.style.transform = `translate(0px,0px) scale(${zoom})`);
-  } else {
-    // ensure current image has current pan/zoom
-    imgEls.forEach(img=> img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`);
-  }
-}
-
-/* ensure visible image has transform applied on load */
-function initImages(){
-  imgEls.forEach((img, i)=>{
-    img.style.transform = `translate(0px,0px) scale(1)`;
-    img.style.transition = 'transform 160ms ease';
-  });
-}
-
-/* update on load */
-function updateTrack(animate=true){
-  if(animate) track.style.transition = 'transform 420ms cubic-bezier(.22,.9,.26,1)';
-  else track.style.transition = 'none';
-  track.style.transform = `translateX(${-index*100}%)`;
-  pageCounter.textContent = `${index+1} / ${pages.length}`;
-  resetImageTransforms();
-}
-
-/* start/reset pan helper when nav pressed while zoomed */
-function startResetPan(){ panX = 0; panY = 0; updateTrack(true); }
-
-/* initial setup */
-document.addEventListener('DOMContentLoaded', ()=>{
-  loadTheme();
-  initImages();
-  updateTrack(false);
-  applyZoom(); // apply initial zoom label/scale
-});
-
-/* zoom apply function reused */
-function applyZoom(){
-  zoom = zoomSteps[zoomIndex] || 1;
-  zoomLabel.textContent = `${Math.round(zoom*100)}%`;
-  imgEls.forEach(img => img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`);
-}
-
-/* initialize zoom steps/label vars (local to file) */
-const zoomSteps = [1,1.25,1.5,1.75,2];
-
-// wire up zoom buttons
-zoomInBtn.addEventListener('click', ()=>{
-  if(zoomIndex < zoomSteps.length - 1) zoomIndex++;
-  applyZoom();
-});
-zoomOutBtn.addEventListener('click', ()=>{
-  if(zoomIndex > 0) zoomIndex--;
-  applyZoom();
-});
-zoomReset.addEventListener('click', ()=>{ zoomIndex = 0; panX = 0; panY = 0; applyZoom(); });
-
-// set initial zoom values
-let zoomIndex = 0;
-applyZoom();
-
-/* helper to load theme from localStorage (again for safety) */
+/* ===== theme handling ===== */
 function loadTheme(){
   const t = localStorage.getItem('ddc-theme') || 'dark';
   document.body.setAttribute('data-theme', t);
   themeToggle.textContent = t === 'dark' ? '☾' : '☼';
 }
+function toggleTheme(){
+  const now = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', now);
+  localStorage.setItem('ddc-theme', now);
+  themeToggle.textContent = now === 'dark' ? '☾' : '☼';
+}
+
+/* ===== carousel & UI updates ===== */
+function updateTrack(animate=true){
+  track.style.transition = animate ? 'transform 420ms cubic-bezier(.22,.9,.26,1)' : 'none';
+  track.style.transform = `translateX(${-index*100}%)`;
+  counter.textContent = `${index+1} / ${pages.length}`;
+  resetPanIfNeeded();
+}
+
+function resetPanIfNeeded(){
+  if(zoom === 1){
+    panX = 0; panY = 0;
+    imgs.forEach(img => img.style.transform = `translate(0px,0px) scale(1)`);
+  } else {
+    // ensure current image uses current pan/zoom
+    imgs.forEach((img, i) => {
+      if(i === index) img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+      else img.style.transform = `translate(0px, 0px) scale(${zoom})`;
+    });
+  }
+}
+
+/* ===== zoom handling ===== */
+function applyZoom(){
+  zoom = zoomSteps[zoomIndex] || 1;
+  zoomLabel.textContent = `${Math.round(zoom*100)}%`;
+  imgs.forEach((img,i)=>{
+    // when switching slides, non-current images keep scale but are centered
+    if(i === index){
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    } else {
+      img.style.transform = `translate(0px,0px) scale(${zoom})`;
+    }
+  });
+  // if zoom reset to 1, clear pan
+  if(zoom === 1){ panX=0; panY=0; }
+}
+
+/* ===== navigation helpers ===== */
+function prevPage(){
+  if(zoom === 1){
+    index = (index - 1 + pages.length) % pages.length;
+    updateTrack(true);
+  } else {
+    // small jump reset pan
+    panX = 0; panY = 0; updateTrack(true);
+  }
+}
+function nextPage(){
+  if(zoom === 1){
+    index = (index + 1) % pages.length;
+    updateTrack(true);
+  } else {
+    panX = 0; panY = 0; updateTrack(true);
+  }
+}
+
+/* ===== pointer panning ===== */
+function onPointerDown(e){
+  // only start panning if zoomed
+  if(zoom <= 1) return;
+  panning = true;
+  pointerId = e.pointerId;
+  panStart = {x: e.clientX - panX, y: e.clientY - panY};
+  viewport.setPointerCapture(pointerId);
+  viewport.style.cursor = 'grabbing';
+}
+function onPointerMove(e){
+  if(!panning || e.pointerId !== pointerId) return;
+  panX = e.clientX - panStart.x;
+  panY = e.clientY - panStart.y;
+  imgs[index].style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+function onPointerUp(e){
+  if(!panning || e.pointerId !== pointerId) return;
+  panning = false;
+  try{ viewport.releasePointerCapture(pointerId); }catch(_){}
+  viewport.style.cursor = 'default';
+}
+
+/* ===== touch swipe for changing pages when not zoomed ===== */
+let touchStart = null;
+viewportTouchStart = function(e){
+  if(zoom > 1) return;
+  const t = e.touches ? e.touches[0] : null;
+  if(!t) return;
+  touchStart = {x: t.clientX, y: t.clientY, t: Date.now()};
+};
+viewportTouchEnd = function(e){
+  if(!touchStart) return;
+  const t = (e.changedTouches && e.changedTouches[0]) || null;
+  const endX = t ? t.clientX : touchStart.x;
+  const endY = t ? t.clientY : touchStart.y;
+  const dx = endX - touchStart.x, dy = endY - touchStart.y;
+  if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50){
+    if(dx < 0) nextPage(); else prevPage();
+  } else if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 50){
+    if(dy < 0) nextPage(); else prevPage();
+  }
+  touchStart = null;
+};
+
+/* ===== wheel / keyboard behavior ===== */
+let wheelBlock = false;
+function onWheel(e){
+  if(zoom > 1) return; // allow default panning when zoomed
+  if(wheelBlock) return;
+  if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+    if(e.deltaY > 0) nextPage(); else prevPage();
+    wheelBlock = true;
+    setTimeout(()=> wheelBlock = false, 300);
+  }
+}
+function onKeydown(e){
+  if(e.key === 'ArrowLeft') prevPage();
+  if(e.key === 'ArrowRight') nextPage();
+  if(e.key === '+' || e.key === '=') { zoomIn.click(); }
+  if(e.key === '-') zoomOut.click();
+  if(e.key === ' ') { e.preventDefault(); if(zoom === 1) { zoomIndex = 2; } else zoomIndex = 0; applyZoom(); }
+}
+
+/* ===== init and wiring ===== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // refs
+  track = $('track'); viewport = $('viewport'); imgs = pages.map((_,i)=>$('img-'+i));
+  counter = $('counter'); prevBtn = $('prevBtn'); nextBtn = $('nextBtn');
+  zoomIn = $('zoomIn'); zoomOut = $('zoomOut'); zoomLabel = $('zoomLabel'); zoomReset = $('zoomReset');
+  themeToggle = $('themeToggle');
+
+  loadTheme(); // uses themeToggle too
+  updateTrack(false);
+  applyZoom();
+
+  // listeners
+  prevBtn.addEventListener('click', prevPage);
+  nextBtn.addEventListener('click', nextPage);
+
+  zoomIn.addEventListener('click', ()=>{ if(zoomIndex < zoomSteps.length-1) zoomIndex++; applyZoom(); });
+  zoomOut.addEventListener('click', ()=>{ if(zoomIndex > 0) zoomIndex--; applyZoom(); });
+  zoomReset.addEventListener('click', ()=>{ zoomIndex = 0; panX = 0; panY = 0; applyZoom(); });
+
+  // pointer panning (works for mouse and touch via pointer events)
+  viewport.addEventListener('pointerdown', onPointerDown);
+  viewport.addEventListener('pointermove', onPointerMove);
+  viewport.addEventListener('pointerup', onPointerUp);
+  viewport.addEventListener('pointercancel', onPointerUp);
+
+  // touch swipe fallback for mobile
+  viewport.addEventListener('touchstart', viewportTouchStart, {passive:true});
+  viewport.addEventListener('touchend', viewportTouchEnd, {passive:true});
+
+  // wheel & keys
+  window.addEventListener('wheel', onWheel, {passive:true});
+  window.addEventListener('keydown', onKeydown);
+
+  // theme toggle
+  themeToggle.addEventListener('click', toggleTheme);
+
+  // initial visibility / ensure image transforms set
+  imgs.forEach((img)=>{ img.style.transform = 'translate(0px,0px) scale(1)'; img.addEventListener('dragstart', e=>e.preventDefault()); });
+});
+
+/* expose some globals for console debugging (optional) */
+window._ddc = { nextPage, prevPage, applyZoom };
 </script>
 </body>
 </html>
