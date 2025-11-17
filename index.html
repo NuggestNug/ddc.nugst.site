@@ -1,312 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DDC Menu</title>
 <link rel="icon" type="image/png" href="ddc-favi-con.png">
 
 <style>
-  :root { --gap:18px; --panel-radius:12px; --transition:280ms; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        transition: background 0.4s, color 0.4s;
+    }
 
-  /* theme variables (applied via data-theme on body) */
-  body[data-theme="dark"]{
-    --bg: #0f0f11;
-    --fg: #f3f3f3;
-    --panel: rgba(255,255,255,0.07);
-    --panel-hover: rgba(255,255,255,0.18);
-    --shadow: rgba(0,0,0,0.55);
-  }
-  body[data-theme="light"]{
-    --bg: #f6f7f8;
-    --fg: #0f1112;
-    --panel: rgba(0,0,0,0.06);
-    --panel-hover: rgba(0,0,0,0.14);
-    --shadow: rgba(0,0,0,0.12);
-  }
+    :root {
+        --bg-dark: #0c0c0d;
+        --fg-dark: #ffffff;
+        --bg-light: #f4f4f4;
+        --fg-light: #000000;
+    }
 
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-  body{background:var(--bg);color:var(--fg);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    [data-theme="dark"] { --bg: var(--bg-dark); --fg: var(--fg-dark); }
+    [data-theme="light"] { --bg: var(--bg-light); --fg: var(--fg-light); }
 
-  /* main viewport & carousel */
-  .viewport{
-    width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;
-  }
-  .carousel{
-    width:min(95vw,1200px);height:min(95vh,1600px);overflow:hidden;border-radius:10px;position:relative;
-  }
-  .track{display:flex;width:100%;height:100%;transition:transform 420ms cubic-bezier(.22,.9,.26,1);will-change:transform;}
-  .slide{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
-  .slide img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;user-select:none;-webkit-user-drag:none;touch-action:none;transition:transform 160ms ease;}
+    img {
+        max-width: 100%;
+        max-height: 100%;
+        user-select: none;
+        pointer-events: none;
+        border-radius: 10px;
+    }
 
-  /* nav buttons */
-  .navBtn{
-    position:fixed;top:50%;transform:translateY(-50%);z-index:40;display:inline-flex;align-items:center;justify-content:center;
-    background:var(--panel);color:var(--fg);padding:14px 16px;border-radius:14px;font-size:28px;cursor:pointer;
-    box-shadow: 0 10px 30px var(--shadow);transition:transform 160ms ease, background 160ms ease;
-  }
-  .navBtn:hover{ transform: translateY(-50%) scale(1.18); background:var(--panel-hover); }
-  .nav-left{ left:16px; } .nav-right{ right:16px; }
+    #viewer {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
 
-  /* controls: bottom-right counter */
-  .counter{
-    position:fixed;right:18px;bottom:18px;background:var(--panel);color:var(--fg);padding:8px 12px;border-radius:10px;
-    font-size:15px;box-shadow:0 8px 24px var(--shadow);transition:background 160ms ease;
-  }
-  .counter:hover{ background:var(--panel-hover); transform: translateY(-1px); }
+    .page {
+        position: absolute;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: transform 0.45s ease, opacity 0.35s ease;
+    }
 
-  /* corner controls */
-  .corner{
-    position:fixed;top:12px;left:12px;display:flex;gap:10px;z-index:50;
-  }
-  .corner .control{
-    background:var(--panel);color:var(--fg);padding:8px 10px;border-radius:10px;font-size:16px;cursor:pointer;
-    box-shadow:0 8px 20px var(--shadow);transition:transform 140ms ease, background 140ms ease;
-  }
-  .corner .control:hover{ transform: scale(1.12); background:var(--panel-hover); }
+    .page.visible {
+        opacity: 1;
+        transform: translateX(0);
+    }
 
-  .corner.right{ left:auto; right:12px; }
+    .page.left {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
 
-  /* zoom grouping */
-  .zoom-label{ padding:6px 8px; font-size:14px; }
+    .arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 10px 18px;
+        background: rgba(0,0,0,0.35);
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 22px;
+        user-select: none;
+        transition: background 0.25s;
+    }
+    .arrow:hover {
+        background: rgba(255,255,255,0.4);
+    }
 
-  /* mobile adjustments */
-  @media (max-width:640px){
-    .navBtn{ padding:16px 18px; font-size:26px; }
-    .corner .control{ padding:10px 12px; font-size:18px; }
-    .counter{ right:12px; bottom:12px; font-size:16px; padding:10px 14px; }
-  }
+    #leftArrow { left: 15px; }
+    #rightArrow { right: 15px; }
 
-  /* focus style */
-  .navBtn:focus, .control:focus{ outline:2px solid rgba(255,255,255,0.06); outline-offset:3px; }
+    #counter {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        background: rgba(0,0,0,0.35);
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    /* Theme button */
+    #themeBtn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(0,0,0,0.35);
+        transition: background 0.25s;
+    }
+    #themeBtn:hover {
+        background: rgba(255,255,255,0.4);
+    }
+
+    /* Zoom controls */
+    #zoomBox {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        display: flex;
+        gap: 6px;
+        background: rgba(0,0,0,0.35);
+        padding: 6px 10px;
+        border-radius: 8px;
+        user-select: none;
+    }
+    #zoomBox div {
+        padding: 3px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        transition: background 0.25s;
+    }
+    #zoomBox div:hover {
+        background: rgba(255,255,255,0.4);
+    }
+
+    /* Panning */
+    #panLayer {
+        position: absolute;
+        inset: 0;
+        cursor: grab;
+    }
 </style>
 </head>
+
 <body>
 
-  <div class="viewport" id="viewport">
-    <div class="carousel" id="carousel">
-      <div class="track" id="track">
-        <div class="slide"><img id="img-0" src="ddc.png" alt="page 1"></div>
-        <div class="slide"><img id="img-1" src="ddc2.png" alt="page 2"></div>
-        <div class="slide"><img id="img-2" src="ddc3.png" alt="page 3"></div>
-      </div>
-    </div>
-  </div>
+<div id="themeBtn">☾</div>
 
-  <!-- arrows -->
-  <div class="navBtn nav-left" id="prevBtn" title="Previous (←)">‹</div>
-  <div class="navBtn nav-right" id="nextBtn" title="Next (→)">›</div>
+<div id="zoomBox">
+    <div id="zoomOut">−</div>
+    <div id="zoomReset">100%</div>
+    <div id="zoomIn">+</div>
+</div>
 
-  <!-- counter -->
-  <div class="counter" id="counter">1 / 3</div>
+<div id="viewer">
+    <div id="panLayer"></div>
 
-  <!-- zoom (top-left) -->
-  <div class="corner" id="cornerLeft">
-    <div class="control" id="zoomOut" title="Zoom out">−</div>
-    <div class="control zoom-label" id="zoomLabel">100%</div>
-    <div class="control" id="zoomIn" title="Zoom in">＋</div>
-    <div class="control" id="zoomReset" title="Reset">⟳</div>
-  </div>
+    <img src="ddc.png" id="page0" class="page visible">
+    <img src="ddc2.png" id="page1" class="page">
+    <img src="ddc3.png" id="page2" class="page">
+</div>
 
-  <!-- theme toggle (top-right) -->
-  <div class="corner right" id="cornerRight">
-    <div class="control" id="themeToggle" title="Toggle light/dark">☾</div>
-  </div>
+<div id="leftArrow" class="arrow">◀</div>
+<div id="rightArrow" class="arrow">▶</div>
+
+<div id="counter">1 / 3</div>
 
 <script>
-/* ===== configuration & state ===== */
-const pages = ['ddc.png','ddc2.png','ddc3.png'];
-let index = 0;
+    /* THEME */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById("themeBtn");
 
-const zoomSteps = [1, 1.25, 1.5, 1.75, 2];
-let zoomIndex = 0;
-let zoom = zoomSteps[zoomIndex];
-let panX = 0, panY = 0;
-let panning = false;
-let panStart = {x:0,y:0};
-let pointerId = null;
-
-/* DOM refs */
-let track, viewport, imgs, counter, prevBtn, nextBtn, zoomIn, zoomOut, zoomLabel, zoomReset, themeToggle;
-
-function $(id){ return document.getElementById(id); }
-
-/* ===== theme handling ===== */
-function loadTheme(){
-  const t = localStorage.getItem('ddc-theme') || 'dark';
-  document.body.setAttribute('data-theme', t);
-  themeToggle.textContent = t === 'dark' ? '☾' : '☼';
-}
-function toggleTheme(){
-  const now = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.body.setAttribute('data-theme', now);
-  localStorage.setItem('ddc-theme', now);
-  themeToggle.textContent = now === 'dark' ? '☾' : '☼';
-}
-
-/* ===== carousel & UI updates ===== */
-function updateTrack(animate=true){
-  track.style.transition = animate ? 'transform 420ms cubic-bezier(.22,.9,.26,1)' : 'none';
-  track.style.transform = `translateX(${-index*100}%)`;
-  counter.textContent = `${index+1} / ${pages.length}`;
-  resetPanIfNeeded();
-}
-
-function resetPanIfNeeded(){
-  if(zoom === 1){
-    panX = 0; panY = 0;
-    imgs.forEach(img => img.style.transform = `translate(0px,0px) scale(1)`);
-  } else {
-    // ensure current image uses current pan/zoom
-    imgs.forEach((img, i) => {
-      if(i === index) img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-      else img.style.transform = `translate(0px, 0px) scale(${zoom})`;
-    });
-  }
-}
-
-/* ===== zoom handling ===== */
-function applyZoom(){
-  zoom = zoomSteps[zoomIndex] || 1;
-  zoomLabel.textContent = `${Math.round(zoom*100)}%`;
-  imgs.forEach((img,i)=>{
-    // when switching slides, non-current images keep scale but are centered
-    if(i === index){
-      img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-    } else {
-      img.style.transform = `translate(0px,0px) scale(${zoom})`;
+    function setTheme(t) {
+        root.setAttribute("data-theme", t);
+        themeBtn.textContent = t === "dark" ? "☾" : "☼";
+        localStorage.setItem("theme", t);
     }
-  });
-  // if zoom reset to 1, clear pan
-  if(zoom === 1){ panX=0; panY=0; }
-}
 
-/* ===== navigation helpers ===== */
-function prevPage(){
-  if(zoom === 1){
-    index = (index - 1 + pages.length) % pages.length;
-    updateTrack(true);
-  } else {
-    // small jump reset pan
-    panX = 0; panY = 0; updateTrack(true);
-  }
-}
-function nextPage(){
-  if(zoom === 1){
-    index = (index + 1) % pages.length;
-    updateTrack(true);
-  } else {
-    panX = 0; panY = 0; updateTrack(true);
-  }
-}
+    setTheme(localStorage.getItem("theme") || "dark");
 
-/* ===== pointer panning ===== */
-function onPointerDown(e){
-  // only start panning if zoomed
-  if(zoom <= 1) return;
-  panning = true;
-  pointerId = e.pointerId;
-  panStart = {x: e.clientX - panX, y: e.clientY - panY};
-  viewport.setPointerCapture(pointerId);
-  viewport.style.cursor = 'grabbing';
-}
-function onPointerMove(e){
-  if(!panning || e.pointerId !== pointerId) return;
-  panX = e.clientX - panStart.x;
-  panY = e.clientY - panStart.y;
-  imgs[index].style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-}
-function onPointerUp(e){
-  if(!panning || e.pointerId !== pointerId) return;
-  panning = false;
-  try{ viewport.releasePointerCapture(pointerId); }catch(_){}
-  viewport.style.cursor = 'default';
-}
+    themeBtn.onclick = () => {
+        const newT = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        setTheme(newT);
+    };
 
-/* ===== touch swipe for changing pages when not zoomed ===== */
-let touchStart = null;
-viewportTouchStart = function(e){
-  if(zoom > 1) return;
-  const t = e.touches ? e.touches[0] : null;
-  if(!t) return;
-  touchStart = {x: t.clientX, y: t.clientY, t: Date.now()};
-};
-viewportTouchEnd = function(e){
-  if(!touchStart) return;
-  const t = (e.changedTouches && e.changedTouches[0]) || null;
-  const endX = t ? t.clientX : touchStart.x;
-  const endY = t ? t.clientY : touchStart.y;
-  const dx = endX - touchStart.x, dy = endY - touchStart.y;
-  if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50){
-    if(dx < 0) nextPage(); else prevPage();
-  } else if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 50){
-    if(dy < 0) nextPage(); else prevPage();
-  }
-  touchStart = null;
-};
+    /* PAGES */
+    let current = 0;
+    const pages = [
+        document.getElementById("page0"),
+        document.getElementById("page1"),
+        document.getElementById("page2")
+    ];
 
-/* ===== wheel / keyboard behavior ===== */
-let wheelBlock = false;
-function onWheel(e){
-  if(zoom > 1) return; // allow default panning when zoomed
-  if(wheelBlock) return;
-  if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
-    if(e.deltaY > 0) nextPage(); else prevPage();
-    wheelBlock = true;
-    setTimeout(()=> wheelBlock = false, 300);
-  }
-}
-function onKeydown(e){
-  if(e.key === 'ArrowLeft') prevPage();
-  if(e.key === 'ArrowRight') nextPage();
-  if(e.key === '+' || e.key === '=') { zoomIn.click(); }
-  if(e.key === '-') zoomOut.click();
-  if(e.key === ' ') { e.preventDefault(); if(zoom === 1) { zoomIndex = 2; } else zoomIndex = 0; applyZoom(); }
-}
+    function updatePages(newIndex) {
+        pages.forEach((p, i) => {
+            p.classList.remove("visible", "left");
+            if (i === newIndex) p.classList.add("visible");
+            if (i < newIndex) p.classList.add("left");
+        });
+        current = newIndex;
+        document.getElementById("counter").textContent = (current+1) + " / " + pages.length;
+    }
 
-/* ===== init and wiring ===== */
-document.addEventListener('DOMContentLoaded', ()=>{
-  // refs
-  track = $('track'); viewport = $('viewport'); imgs = pages.map((_,i)=>$('img-'+i));
-  counter = $('counter'); prevBtn = $('prevBtn'); nextBtn = $('nextBtn');
-  zoomIn = $('zoomIn'); zoomOut = $('zoomOut'); zoomLabel = $('zoomLabel'); zoomReset = $('zoomReset');
-  themeToggle = $('themeToggle');
+    document.getElementById("leftArrow").onclick = () => {
+        if (current > 0) updatePages(current - 1);
+    };
+    document.getElementById("rightArrow").onclick = () => {
+        if (current < pages.length - 1) updatePages(current + 1);
+    };
 
-  loadTheme(); // uses themeToggle too
-  updateTrack(false);
-  applyZoom();
+    /* ZOOM + PAN */
+    let zoom = 1;
+    const minZ = 0.5;
+    const maxZ = 5;
+    const viewer = document.getElementById("viewer");
+    const panLayer = document.getElementById("panLayer");
 
-  // listeners
-  prevBtn.addEventListener('click', prevPage);
-  nextBtn.addEventListener('click', nextPage);
+    function applyZoom() {
+        pages.forEach(p => {
+            p.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+            p.style.left = "50%";
+            p.style.top = "50%";
+            p.style.position = "absolute";
+        });
+        document.getElementById("zoomReset").textContent = Math.round(zoom*100) + "%";
+    }
 
-  zoomIn.addEventListener('click', ()=>{ if(zoomIndex < zoomSteps.length-1) zoomIndex++; applyZoom(); });
-  zoomOut.addEventListener('click', ()=>{ if(zoomIndex > 0) zoomIndex--; applyZoom(); });
-  zoomReset.addEventListener('click', ()=>{ zoomIndex = 0; panX = 0; panY = 0; applyZoom(); });
+    document.getElementById("zoomIn").onclick = () => {
+        zoom = Math.min(maxZ, zoom + 0.1);
+        applyZoom();
+    };
+    document.getElementById("zoomOut").onclick = () => {
+        zoom = Math.max(minZ, zoom - 0.1);
+        applyZoom();
+    };
+    document.getElementById("zoomReset").onclick = () => {
+        zoom = 1;
+        applyZoom();
+    };
 
-  // pointer panning (works for mouse and touch via pointer events)
-  viewport.addEventListener('pointerdown', onPointerDown);
-  viewport.addEventListener('pointermove', onPointerMove);
-  viewport.addEventListener('pointerup', onPointerUp);
-  viewport.addEventListener('pointercancel', onPointerUp);
+    /* Panning */
+    let dragging = false;
+    let startX, startY;
+    let offsetX = 0, offsetY = 0;
 
-  // touch swipe fallback for mobile
-  viewport.addEventListener('touchstart', viewportTouchStart, {passive:true});
-  viewport.addEventListener('touchend', viewportTouchEnd, {passive:true});
+    panLayer.addEventListener("mousedown", e => {
+        dragging = true;
+        panLayer.style.cursor = "grabbing";
+        startX = e.clientX - offsetX;
+        startY = e.clientY - offsetY;
+    });
 
-  // wheel & keys
-  window.addEventListener('wheel', onWheel, {passive:true});
-  window.addEventListener('keydown', onKeydown);
+    window.addEventListener("mousemove", e => {
+        if (!dragging) return;
+        offsetX = e.clientX - startX;
+        offsetY = e.clientY - startY;
+        viewer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    });
 
-  // theme toggle
-  themeToggle.addEventListener('click', toggleTheme);
+    window.addEventListener("mouseup", () => {
+        dragging = false;
+        panLayer.style.cursor = "grab";
+    });
 
-  // initial visibility / ensure image transforms set
-  imgs.forEach((img)=>{ img.style.transform = 'translate(0px,0px) scale(1)'; img.addEventListener('dragstart', e=>e.preventDefault()); });
-});
-
-/* expose some globals for console debugging (optional) */
-window._ddc = { nextPage, prevPage, applyZoom };
+    /* MOBILE SWIPE */
+    let touchStartX = 0;
+    window.addEventListener("touchstart", e => {
+        touchStartX = e.touches[0].clientX;
+    });
+    window.addEventListener("touchend", e => {
+        const endX = e.changedTouches[0].clientX;
+        if (endX - touchStartX > 50 && current > 0) updatePages(current - 1);
+        if (touchStartX - endX > 50 && current < pages.length - 1) updatePages(current + 1);
+    });
 </script>
 </body>
 </html>
